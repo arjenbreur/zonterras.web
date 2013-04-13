@@ -1,0 +1,173 @@
+<?php
+error_reporting(E_ALL);
+ini_set('display_errors','On');
+date_default_timezone_set('GMT');
+
+include_once('./functions.php');
+
+
+$lat = (isset($_REQUEST['lat']))?$_REQUEST['lat']:0;
+$lng = (isset($_REQUEST['lng']))?$_REQUEST['lng']:0;
+$time = (isset($_REQUEST['time']))?intval($_REQUEST['time']):time();
+$panoid = (isset($_REQUEST['panoid']))?$_REQUEST['panoid']:null; 
+
+$mode = (isset($_REQUEST['mode']) && in_array($_REQUEST['mode'],array('streetview','pano')))?$_REQUEST['mode']:'pano'; 
+
+if($lat && $lng){
+	die('OLD CODE?');
+	/* OLD CODE * /
+	$sunpos = sunpos($lat,$lng,$time);
+	if($mode=='pano'){
+		$sUrl = "http://cbk0.google.com/cbk?output=xml&ll=$lat,$lng";
+		$sXml = get_url_contents($sUrl);
+		$oXml = new SimpleXMLElement($sXml);
+
+		if(is_object($oXml) && isset($oXml->data_properties) && isset($oXml->data_properties['pano_id'])){
+			//echo "<pre>";print_r($oXml);echo "</pre>";die();
+			$panoid = $oXml->data_properties['pano_id'];
+			$sImgSrc = "image.php?panoid=$panoid&yaw=".round($sunpos['azimuth'])."&pitch=".round($sunpos['elevation'])."&lat=$lat&lng=$lng";
+			?>
+			<a href="./?<?php echo $_SERVER['QUERY_STRING'];?>&mode=streetview" ><img src="<?php echo $sImgSrc; ?>" style="XXXwidth:100%" /></a>
+			<?php
+
+		}else{
+			$mode='streetview';
+		}
+	}
+	if($mode=='streetview'){
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+		<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+		<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+		<title>Zonterras - 3r13</title>
+		<script src="http://maps.google.com/maps/api/js?sensor=false" type="text/javascript"></script>
+		<script type="text/javascript">
+		function initialize() {
+		  var fenway = new google.maps.LatLng(<?php echo $sunpos['lat'].','.$sunpos['lng'];?>);
+		
+		  var panoOptions = {
+			position: fenway,
+			linksControl: false,
+			panControl: false,
+			zoomControl: false,
+			addressControl:false,
+			enableCloseButton: false,
+			pov: {
+				heading: <?php echo $sunpos['azimuth'];?>,
+				pitch: <?php echo $sunpos['elevation'];?>,
+				zoom: 0,
+			},
+		  };
+		
+		  var panorama = new google.maps.StreetViewPanorama(
+			  document.getElementById("pano"), panoOptions);
+		}
+		</script>
+		<style type="text/css" >
+		html,body,div#pano{
+			height: 100%;
+		}
+		</style>
+		</head>
+		<body onload="initialize()" >
+		  <div id="pano" ></div>
+			<script type="text/javascript">
+			
+			  var _gaq = _gaq || [];
+			  _gaq.push(['_setAccount', 'UA-22015326-2']);
+			  _gaq.push(['_trackPageview']);
+			
+			  (function() {
+				var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+				ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+				var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+			  })();
+			
+			</script>
+		</body>
+		</html>
+		
+		<?php
+	}
+	/* end old code */
+}else{
+	?>
+	<!DOCTYPE html>
+	<html>
+	<head>
+	<meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+	<title>Zonterras - 3r13</title>
+	<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+	<script type="text/javascript">
+	  var map;
+	  var infoWindow;
+	  var marker;
+	  
+	  function initialize() {
+		var myLatlng = new google.maps.LatLng(52.37239,4.900664); // nieuwmarkt
+		var myOptions = {
+		  zoom: 12,
+		  center: myLatlng,
+		  mapTypeId: google.maps.MapTypeId.ROADMAP
+		}
+		map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+		marker = new google.maps.Marker({
+			position:myLatlng,
+			map: map,
+			title:"Zonpositie"
+		});
+		infowindow = new google.maps.InfoWindow();
+//		infowindow.setContent('<a href="./?<?php echo $_SERVER['QUERY_STRING'];?>&mode=streetview" ><img src="image.php?lat='+myLatlng.lat()+'&lng='+myLatlng.lng()+'" /></a>');
+		infowindow.setContent('<img src="./image.php?lat='+myLatlng.lat()+'&lng='+myLatlng.lng()+'" />');
+		infowindow.open(map,marker);
+
+		google.maps.event.addListener(map, 'click', function(event) {
+			marker.setMap(map);
+			marker.setPosition(event.latLng);
+			infowindow.setContent('<br/>');// clear old picture, loading new one takes some time
+			infowindow.setContent('<img src="./image.php?lat='+event.latLng.lat()+'&lng='+event.latLng.lng()+'" />');
+			infowindow.open(map,marker);
+		});
+	  }
+	</script>
+	<style type="text/css" >
+	html,body,div#map_canvas,iframe{
+		height: 100%;
+		padding:0;
+		margin:0;
+	}
+	iframe{
+		border:none;
+		width:416px;
+		height:208px;
+		overflow:hidden;
+	}
+	</style></head>
+	<body onload="initialize()">
+	  <div id="map_canvas"></div>
+		<script type="text/javascript">
+		
+		  var _gaq = _gaq || [];
+		  _gaq.push(['_setAccount', 'UA-22015326-2']);
+		  _gaq.push(['_trackPageview']);
+		
+		  (function() {
+			var ga = document.createElement('script'); ga.type = 'text/javascript'; ga.async = true;
+			ga.src = ('https:' == document.location.protocol ? 'https://ssl' : 'http://www') + '.google-analytics.com/ga.js';
+			var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(ga, s);
+		  })();
+		
+		</script>
+	</body>
+	</html>
+	<?php    
+}
+
+
+// FUNCTIONS
+
+

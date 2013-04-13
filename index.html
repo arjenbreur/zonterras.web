@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js"> <!--<![endif]-->
+    <head>
+        <meta charset="utf-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+        <title>Zonterras</title>
+        <meta name="description" content="Find a terras that's in the sun right now!">
+        <meta name="viewport" content="width=device-width">
+
+        <link rel="stylesheet" href="css/normalize.min.css">
+        <link rel="stylesheet" href="css/main.css">
+
+        <script src="js/vendor/modernizr-2.6.2-respond-1.1.0.min.js"></script>
+        <style>
+			.footer-container FOOTER{
+        		overflow:auto; /* prevent float container collapse */
+        		padding:0; /* override main.css */
+        	}
+        	.footer-container FOOTER H3{
+        		float:left;
+        		margin: 20px 0; /* instead of FOOTER padding */
+        	}
+        	/* * /
+        	.main{
+        	    position: absolute;
+    			z-index: 10;
+    		}
+    		/* */
+        	#mapcanvas{
+        		height:21em;
+				width:100%;
+        	}
+        	#status{
+        		float:left;
+        		position:absolute;
+        		top:1.9em;
+        	}
+        </style>
+    </head>
+    <body>
+        <!--[if lt IE 7]>
+            <p class="chromeframe">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> or <a href="http://www.google.com/chromeframe/?redirect=true">activate Google Chrome Frame</a> to improve your experience.</p>
+        <![endif]-->
+
+        <div class="header-container">
+            <header class="wrapper clearfix">
+                <h1 class="title">Zonterras</h1>
+				<p id="status">Finding your location: checking...</p>
+            </header>
+        </div>
+
+        <div id="main-container" class="main-container">
+            <div id="main" class="main wrapper clearfix">
+
+			    <article>
+			    </article>
+                <aside>
+                    <h3>aside</h3>
+                    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Aliquam sodales urna non odio egestas tempor. Nunc vel vehicula ante. Etiam bibendum iaculis libero, eget molestie nisl pharetra in. In semper consequat est, eu porta velit mollis nec. Curabitur posuere enim eget turpis feugiat tempor. Etiam ullamcorper lorem dapibus velit suscipit ultrices.</p>
+                </aside>
+
+            </div> <!-- #main -->
+        </div> <!-- #main-container -->
+
+        <div class="footer-container">
+            <footer class="wrapper">
+                <h3>footer</h3>
+	            <nav>
+                    <ul>
+                        <li><a href="/zonterras/">Home</a></li>
+                        <li><a href="/zonterras/about.html">About</a></li>
+                        <li><a href="#">Nav 3</a></li>
+                    </ul>
+                </nav>
+            </footer>
+        </div>
+
+        <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+        <script>window.jQuery || document.write('<script src="js/vendor/jquery-1.9.1.min.js"><\/script>')</script>
+
+        <script src="js/main.js"></script>
+
+		<script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script>
+		<script>
+			var infowindow;
+			var map;
+	
+			function geolocationSuccess(position) {
+			  
+			  var mapcanvas = document.createElement('div');
+			  mapcanvas.id = 'mapcanvas';
+			    
+			  document.querySelector('article').appendChild(mapcanvas);
+			  
+			  var latlng = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
+			  var myOptions = {
+			    zoom: 15,
+			    center: latlng,
+			    mapTypeControl: false,
+			    navigationControlOptions: {style: google.maps.NavigationControlStyle.SMALL},
+			    mapTypeId: google.maps.MapTypeId.ROADMAP
+			  };
+			  
+			  map = new google.maps.Map(document.getElementById("mapcanvas"), myOptions);
+			  
+			  var marker = new google.maps.Marker({
+			      position: latlng, 
+			      map: map, 
+			      title:"You are here! (at least within a "+position.coords.accuracy+" meter radius)"
+			  });
+			  
+			  // search for sunny terrasses and load results on map
+			  searchSunshine(position.coords.latitude, position.coords.longitude);
+			  
+			  // add click event to map
+			  google.maps.event.addListener(map, "click", function(event) {
+			      searchSunshine(event.latLng.lat(), event.latLng.lng());
+			  });
+
+
+			}
+			
+			function geolocationError(msg) {
+				var s = document.querySelector('#status');
+				s.innerHTML = typeof msg == 'string' ? msg : "failed";
+				s.className = 'fail';
+				console.log(arguments);
+			}
+	
+			var bSearching = false;
+			function searchSunshine(lat, lng) {
+				
+				if(bSearching) return;
+				
+				var s = document.querySelector('#status');
+				s.innerHTML = "Searching for sunny terasses near you...";
+
+				bSearching = true;
+				setTimeout("bSearching=false",10000);
+				jQuery.get("/zonterras/api/api.php?lat="+lat+"&lng="+lng, function(data) {
+					bSearching = false;
+					var iCount = 0;
+					jQuery(data).find("searchresult").each(function() {
+					    var eachMarker = jQuery(this);
+					    var markerCoords = new google.maps.LatLng(
+					        parseFloat(eachMarker.find("sunshine").attr('lat')),
+					        parseFloat(eachMarker.find("sunshine").attr('lng'))
+					    );
+					    var name = eachMarker.find("name").text();
+					    var content = '<a href="'+decodeURIComponent(eachMarker.find("panourl").text())+'">Panorama</a>';
+					    var sunwindowstart = eachMarker.find("sunwindow").find("start").text() || "";
+					    var sunwindowend   = eachMarker.find("sunwindow").find("end").text() || "";
+					    var html = '<div class="info-blob">' + name + '<br />' + content + '<br />Sunwindow: ' + sunwindowstart + '-' + sunwindowend +  '</div>';
+					    var marker = addMarker(html, markerCoords);
+					    iCount++;
+				   });
+				var s = document.querySelector('#status');
+				s.innerHTML = "Found "+iCount;
+			  });
+			};
+	
+			// Create a marker for each XML entry
+			function addMarker(html, markerCoords) {
+				// Place the new marker
+				var marker = new google.maps.Marker({
+				    animation: google.maps.Animation.DROP,
+				    map: map,
+				    position: markerCoords, 
+				    icon: "/zonterras/img/sunny.png"
+				}); // end place the new marker
+	
+				// Add event listener. On marker click, close all open infoWindows open current infoWindow.
+				google.maps.event.addListener(marker, "click", function() {
+				    if (infowindow) infowindow.close();
+				    infowindow = new google.maps.InfoWindow({content: html});
+				    infowindow.open(map, marker);
+				}); // end add event listener
+			
+				// Display marker
+				return marker;
+	
+			} // end addMarker();
+			
+			
+			// INIT, find geolocation
+			if (navigator.geolocation) {
+				navigator.geolocation.getCurrentPosition(geolocationSuccess, geolocationError);
+			} else {
+				geolocationError('not supported');
+			}
+			
+		</script>
+
+
+        <script>
+            var _gaq=[['_setAccount','UA-XXXXX-X'],['_trackPageview']];
+            (function(d,t){var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+            g.src=('https:'==location.protocol?'//ssl':'//www')+'.google-analytics.com/ga.js';
+            s.parentNode.insertBefore(g,s)}(document,'script'));
+        </script>
+    </body>
+</html>
